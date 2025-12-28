@@ -1,0 +1,16 @@
+# Build artifacts
+hijiri-sh
+*.o
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# docs
+docs/
