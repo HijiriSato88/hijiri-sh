@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #define MAX_INPUT 1024
+#define MAX_ARGS 64
 
 void builtin_pwd(void) {
     char cwd[1024];
@@ -14,8 +15,40 @@ void builtin_pwd(void) {
     }
 }
 
+void builtin_cd(char **argv) {
+    const char *path;
+
+    if (argv[1] == NULL) {
+        path = getenv("HOME");
+        if (path == NULL) {
+            fprintf(stderr, "cd: HOME not set\n");
+            return;
+        }
+    } else {
+        path = argv[1];
+    }
+
+    if (chdir(path) != 0) {
+        perror("cd");
+    }
+}
+
+int parse_input(char *input, char **argv) {
+    int argc = 0;
+    char *token = strtok(input, " \t");
+
+    while (token != NULL && argc < MAX_ARGS - 1) {
+        argv[argc++] = token;
+        token = strtok(NULL, " \t");
+    }
+    argv[argc] = NULL;
+
+    return argc;
+}
+
 int main(void) {
     char input[MAX_INPUT];
+    char *argv[MAX_ARGS];
 
     while (1) {
         printf("hijiri-sh> ");
@@ -32,14 +65,19 @@ int main(void) {
             continue;
         }
 
-        if (strcmp(input, "exit") == 0) {
-            break;
+        int argc = parse_input(input, argv);
+        if (argc == 0) {
+            continue;
         }
 
-        if (strcmp(input, "pwd") == 0) {
+        if (strcmp(argv[0], "exit") == 0) {
+            break;
+        } else if (strcmp(argv[0], "pwd") == 0) {
             builtin_pwd();
+        } else if (strcmp(argv[0], "cd") == 0) {
+            builtin_cd(argv);
         } else {
-            printf("hijiri-sh: command not found: %s\n", input);
+            printf("hijiri-sh: command not found: %s\n", argv[0]);
         }
     }
 
