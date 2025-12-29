@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #define MAX_INPUT 1024
 #define MAX_ARGS 64
@@ -30,6 +31,22 @@ void builtin_cd(char **argv) {
 
     if (chdir(path) != 0) {
         perror("cd");
+    }
+}
+
+void execute_external(char **argv) {
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        execvp(argv[0], argv);
+        // execvp が戻ってきたらエラー
+        perror(argv[0]);
+        exit(1);
+    } else if (pid > 0) {
+        int status;
+        waitpid(pid, &status, 0);
+    } else {
+        perror("fork");
     }
 }
 
@@ -77,7 +94,7 @@ int main(void) {
         } else if (strcmp(argv[0], "cd") == 0) {
             builtin_cd(argv);
         } else {
-            printf("hijiri-sh: command not found: %s\n", argv[0]);
+            execute_external(argv);
         }
     }
 
