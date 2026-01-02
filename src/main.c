@@ -4,6 +4,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
 
 #define MAX_INPUT 1024
 #define MAX_ARGS 64
@@ -32,38 +36,97 @@ void builtin_tty(void) {
     }
 }
 
-void builtin_ls(char **argv) {
-    const char *path;
+void print_permissions(mode_t mode) {
+    // ファイルタイプ
+    char type = '-';
+    if (S_ISDIR(mode)) type = 'd';
+    else if (S_ISLNK(mode)) type = 'l';
 
-    // 引数がなければカレントディレクトリ
-    if (argv[1] == NULL) {
-        path = ".";
-    } else {
-        path = argv[1];
+    printf("%c", type);
+    printf("%c", (mode & S_IRUSR) ? 'r' : '-');
+    printf("%c", (mode & S_IWUSR) ? 'w' : '-');
+    printf("%c", (mode & S_IXUSR) ? 'x' : '-');
+    printf("%c", (mode & S_IRGRP) ? 'r' : '-');
+    printf("%c", (mode & S_IWGRP) ? 'w' : '-');
+    printf("%c", (mode & S_IXGRP) ? 'x' : '-');
+    printf("%c", (mode & S_IROTH) ? 'r' : '-');
+    printf("%c", (mode & S_IWOTH) ? 'w' : '-');
+    printf("%c", (mode & S_IXOTH) ? 'x' : '-');
+}
+
+void builtin_ls(char **argv) {
+    const char *path = ".";
+    int long_format = 0;
+
+    // オプションと引数の解析
+    for (int i = 1; argv[i] != NULL; i++) {
+        if (strcmp(argv[i], "-l") == 0) {
+            long_format = 1;
+        } else {
+            path = argv[i];
+        }
     }
 
-    // ディレクトリを開く
     DIR *dir = opendir(path);
     if (dir == NULL) {
         perror("ls");
         return;
     }
 
-    // ディレクトリエントリを読み取る
     struct dirent *entry;
     int first = 1;
     while ((entry = readdir(dir)) != NULL) {
-        // 隠しファイル（.で始まる）はスキップ
         if (entry->d_name[0] == '.') {
             continue;
         }
-        if (!first) {
-            printf(" ");
+
+        if (long_format) {
+            // フルパスを構築
+            char fullpath[1024];
+            snprintf(fullpath, sizeof(fullpath), "%s/%s", path, entry->d_name);
+
+            struct stat st;
+            if (stat(fullpath, &st) == -1) {
+                perror(entry->d_name);
+                continue;
+            }
+
+            // パーミッション
+            print_permissions(st.st_mode);
+
+            // リンク数
+            printf(" %3lu", (unsigned long)st.st_nlink);
+
+            // 所有者
+            struct passwd *pw = getpwuid(st.st_uid);
+            printf(" %-8s", pw ? pw->pw_name : "?");
+
+            // グループ
+            struct group *gr = getgrgid(st.st_gid);
+            printf(" %-8s", gr ? gr->gr_name : "?");
+
+            // サイズ
+            printf(" %8lld", (long long)st.st_size);
+
+            // 更新日時
+            char timebuf[64];
+            strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&st.st_mtime));
+            printf(" %s", timebuf);
+
+            // ファイル名
+            printf(" %s\n", entry->d_name);
+        } else {
+            if (!first) {
+                printf(" ");
+            }
+            printf("%s", entry->d_name);
+            first = 0;
         }
-        printf("%s", entry->d_name);
-        first = 0;
     }
-    printf("\n");
+
+    if (!long_format) {
+        printf("\n");
+    }
 
     closedir(dir);
 }
