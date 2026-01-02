@@ -16,6 +16,21 @@ void builtin_pwd(void) {
     }
 }
 
+void builtin_tty(void) {
+    // isatty() で標準入力がターミナルに接続されているか確認
+    if (!isatty(STDIN_FILENO)) {
+        printf("not a tty\n");
+        return;
+    }
+
+    char *tty_name = ttyname(STDIN_FILENO);
+    if (tty_name != NULL) {
+        printf("%s\n", tty_name);
+    } else {
+        perror("tty");
+    }
+}
+
 void builtin_cd(char **argv) {
     const char *path;
 
@@ -93,8 +108,11 @@ int main(void) {
             builtin_pwd();
         } else if (strcmp(argv[0], "cd") == 0) {
             builtin_cd(argv);
+        } else if (strcmp(argv[0], "tty") == 0) {
+            builtin_tty();
         } else {
-            execute_external(argv);
+            // execute_external(argv);
+            fprintf(stderr, "%s: command not found\n", argv[0]);
         }
     }
 
