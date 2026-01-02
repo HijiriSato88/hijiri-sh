@@ -10,7 +10,7 @@ WORKDIR /shell
 COPY src/ ./src/
 
 # ビルド
-RUN gcc -Wall -Wextra -g -o hijiri-sh src/main.c
+RUN gcc -Wall -Wextra -g -o hijiri-sh src/main.c src/commands/*.c
 
 # 自作シェルを起動
 CMD ["./hijiri-sh"]
