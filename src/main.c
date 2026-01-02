@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <dirent.h>
 
 #define MAX_INPUT 1024
 #define MAX_ARGS 64
@@ -29,6 +30,42 @@ void builtin_tty(void) {
     } else {
         perror("tty");
     }
+}
+
+void builtin_ls(char **argv) {
+    const char *path;
+
+    // 引数がなければカレントディレクトリ
+    if (argv[1] == NULL) {
+        path = ".";
+    } else {
+        path = argv[1];
+    }
+
+    // ディレクトリを開く
+    DIR *dir = opendir(path);
+    if (dir == NULL) {
+        perror("ls");
+        return;
+    }
+
+    // ディレクトリエントリを読み取る
+    struct dirent *entry;
+    int first = 1;
+    while ((entry = readdir(dir)) != NULL) {
+        // 隠しファイル（.で始まる）はスキップ
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+        if (!first) {
+            printf(" ");
+        }
+        printf("%s", entry->d_name);
+        first = 0;
+    }
+    printf("\n");
+
+    closedir(dir);
 }
 
 void builtin_cd(char **argv) {
@@ -110,6 +147,8 @@ int main(void) {
             builtin_cd(argv);
         } else if (strcmp(argv[0], "tty") == 0) {
             builtin_tty();
+        } else if (strcmp(argv[0], "ls") == 0) {
+            builtin_ls(argv);
         } else {
             // execute_external(argv);
             fprintf(stderr, "%s: command not found\n", argv[0]);
