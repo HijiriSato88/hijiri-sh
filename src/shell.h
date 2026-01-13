@@ -11,6 +11,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
+#include <fcntl.h>
 
 #define MAX_INPUT 1024
 #define MAX_ARGS 64
@@ -20,5 +21,6 @@ void builtin_pwd(void);
 void builtin_cd(char **argv);
 void builtin_ls(char **argv);
 void builtin_tty(void);
+void builtin_cat(char **argv);
 
 #endif

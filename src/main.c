@@ -47,6 +47,8 @@ int main(void) {
             builtin_tty();
         } else if (strcmp(argv[0], "ls") == 0) {
             builtin_ls(argv);
+        } else if (strcmp(argv[0], "cat") == 0) {
+            builtin_cat(argv);
         } else {
             fprintf(stderr, "%s: command not found\n", argv[0]);
         }
